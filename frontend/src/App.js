@@ -17,9 +17,14 @@ function App() {
 
       const data = await response.json();
 
-      console.log("Backend response:", data);
+      console.log("Financial ratios:", data);
 
-      alert(data.message);
+      alert(
+        "Savings Rate: " + data.savingsRate +
+        "\nDebt Ratio: " + data.debtRatio +
+        "\nExpense Ratio: " + data.expenseRatio +
+        "\nInvestment Ratio: " + data.investmentRatio
+      );
 
     } catch (error) {
       console.error("Error connecting backend:", error);
