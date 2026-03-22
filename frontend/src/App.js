@@ -23,7 +23,8 @@ function App() {
         "Savings Rate: " + data.savingsRate +
         "\nDebt Ratio: " + data.debtRatio +
         "\nExpense Ratio: " + data.expenseRatio +
-        "\nInvestment Ratio: " + data.investmentRatio
+        "\nInvestment Ratio: " + data.investmentRatio +
+        "\nHealth Level: " + data.health
       );
 
     } catch (error) {
