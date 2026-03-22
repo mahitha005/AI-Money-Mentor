@@ -26,7 +26,8 @@ function App() {
         "\nInvestment Ratio: " + data.investmentRatio +
         "\nHealth Level: " + data.health +
         "\nEmergency Fund Needed: ₹" + data.emergencyFundRequired +
-        "\nEmergency Fund Gap: ₹" + data.emergencyFundGap
+        "\nEmergency Fund Gap: ₹" + data.emergencyFundGap +
+        "\nSuggested Portfolio: " + data.recommendedPortfolio
       );
 
     } catch (error) {
