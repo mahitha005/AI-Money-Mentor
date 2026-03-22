@@ -22,12 +22,25 @@ public class FinanceService {
         double expenseRatio = expenses / income;
         double investmentRatio = investments / income;
 
+        String health;
+
+        if(savingsRate > 0.25 && debtRatio < 0.2){
+            health = "High";
+        }
+        else if(savingsRate > 0.12){
+            health = "Medium";
+        }
+        else{
+            health = "Low";
+        }
+
         Map<String,Object> result = new HashMap<>();
 
         result.put("savingsRate", savingsRate);
         result.put("debtRatio", debtRatio);
         result.put("expenseRatio", expenseRatio);
         result.put("investmentRatio", investmentRatio);
+        result.put("health", health);
 
         return result;
     }
