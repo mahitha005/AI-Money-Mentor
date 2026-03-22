@@ -34,6 +34,10 @@ public class FinanceService {
             health = "Low";
         }
 
+        double emergencyFundRequired = expenses * 6;
+
+        double emergencyFundGap = emergencyFundRequired - savings;
+
         Map<String,Object> result = new HashMap<>();
 
         result.put("savingsRate", savingsRate);
@@ -41,6 +45,8 @@ public class FinanceService {
         result.put("expenseRatio", expenseRatio);
         result.put("investmentRatio", investmentRatio);
         result.put("health", health);
+        result.put("emergencyFundRequired", emergencyFundRequired);
+        result.put("emergencyFundGap", emergencyFundGap);
 
         return result;
     }

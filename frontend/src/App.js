@@ -24,7 +24,9 @@ function App() {
         "\nDebt Ratio: " + data.debtRatio +
         "\nExpense Ratio: " + data.expenseRatio +
         "\nInvestment Ratio: " + data.investmentRatio +
-        "\nHealth Level: " + data.health
+        "\nHealth Level: " + data.health +
+        "\nEmergency Fund Needed: ₹" + data.emergencyFundRequired +
+        "\nEmergency Fund Gap: ₹" + data.emergencyFundGap
       );
 
     } catch (error) {
