@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 @Service
 public class FinanceService {
@@ -17,32 +19,31 @@ public class FinanceService {
         double investments = request.getInvestments();
         double debt = request.getDebt();
 
-        double savingsRate = (savings / income) * 100;
-        double debtRatio = (debt / income) * 100;
-        double expenseRatio = (expenses / income) * 100;
-        double investmentRatio = (investments / income) * 100;
+        // Financial ratios
+        double savingsRate = savings / income;
+        double debtRatio = debt / income;
+        double expenseRatio = expenses / income;
+        double investmentRatio = investments / income;
 
-        String health;
+        // ML Prediction
+        String health = predictHealthML(
+                savingsRate,
+                expenseRatio,
+                debtRatio,
+                investmentRatio
+        );
 
-        if(savingsRate > 25 && debtRatio < 20){
-            health = "High";
-        }
-        else if(savingsRate > 12){
-            health = "Medium";
-        }
-        else{
-            health = "Low";
-        }
-
+        // Emergency fund
         double emergencyFundRequired = expenses * 6;
         double emergencyFundGap = emergencyFundRequired - savings;
 
+        // Portfolio recommendation
         String portfolio;
 
-        if(health.equals("High")){
+        if("High".equalsIgnoreCase(health)){
             portfolio = "70% Equity Index Funds, 20% Debt Funds, 10% Gold";
         }
-        else if(health.equals("Medium")){
+        else if("Medium".equalsIgnoreCase(health)){
             portfolio = "60% Equity Index Funds, 30% Debt Funds, 10% Gold";
         }
         else{
@@ -51,10 +52,11 @@ public class FinanceService {
 
         Map<String,Object> result = new HashMap<>();
 
-        result.put("savingsRate", String.format("%.1f%%", savingsRate));
-        result.put("debtRatio", String.format("%.1f%%", debtRatio));
-        result.put("expenseRatio", String.format("%.1f%%", expenseRatio));
-        result.put("investmentRatio", String.format("%.1f%%", investmentRatio));
+        // Convert ratios to percentage
+        result.put("savingsRate", String.format("%.2f%%", savingsRate * 100));
+        result.put("debtRatio", String.format("%.2f%%", debtRatio * 100));
+        result.put("expenseRatio", String.format("%.2f%%", expenseRatio * 100));
+        result.put("investmentRatio", String.format("%.2f%%", investmentRatio * 100));
 
         result.put("health", health);
         result.put("emergencyFundRequired", emergencyFundRequired);
@@ -62,5 +64,42 @@ public class FinanceService {
         result.put("recommendedPortfolio", portfolio);
 
         return result;
+    }
+
+
+    public String predictHealthML(double savingsRate,
+                                  double expenseRatio,
+                                  double debtRatio,
+                                  double investmentRatio){
+
+        try{
+
+            ProcessBuilder pb = new ProcessBuilder(
+                    "python",
+                    "ml-model/predict.py",
+                    String.valueOf(savingsRate),
+                    String.valueOf(expenseRatio),
+                    String.valueOf(debtRatio),
+                    String.valueOf(investmentRatio)
+            );
+
+            Process process = pb.start();
+
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String prediction = reader.readLine();
+
+            if(prediction == null || prediction.isEmpty()){
+                return "Medium";
+            }
+
+            return prediction;
+
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            return "Medium";
+        }
     }
 }
