@@ -4,11 +4,29 @@ import FinancialForm from "./components/FinancialForm";
 function App() {
 
   const [result, setResult] = useState(null);
+  const [question,setQuestion] = useState("");
+  const [answer,setAnswer] = useState("");
+
+  const askAI = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/api/chat",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          question:question
+        })
+      });
+      const data = await response.json();
+      setAnswer(data.answer);
+    } catch(error){
+      console.error("Chat error:",error);
+    }
+  };
 
   const handleSubmit = async (formData) => {
-
     try {
-
       const response = await fetch("http://localhost:8080/api/analyze", {
         method: "POST",
         headers: {
@@ -16,11 +34,8 @@ function App() {
         },
         body: JSON.stringify(formData),
       });
-
       const data = await response.json();
-
       setResult(data);
-
     } catch (error) {
       console.error("Error connecting backend:", error);
     }
@@ -35,7 +50,6 @@ function App() {
       <FinancialForm onSubmit={handleSubmit} />
 
       {result && (
-
         <div style={{
           marginTop: "40px",
           display: "flex",
@@ -80,8 +94,40 @@ function App() {
           </div>
 
         </div>
-
       )}
+
+      <div style={{marginTop:"50px"}}>
+
+        <h2>AI Financial Advisor</h2>
+
+        <input
+          type="text"
+          placeholder="Ask a financial question..."
+          value={question}
+          onChange={(e)=>setQuestion(e.target.value)}
+          style={{padding:"10px",width:"300px"}}
+        />
+
+        <button
+          onClick={askAI}
+          style={{marginLeft:"10px",padding:"10px"}}
+        >
+          Ask AI
+        </button>
+
+        {answer && (
+          <div style={{
+            marginTop:"20px",
+            border:"1px solid #ddd",
+            padding:"15px",
+            borderRadius:"8px"
+          }}>
+            <strong>AI Advice:</strong>
+            <p>{answer}</p>
+          </div>
+        )}
+
+      </div>
 
     </div>
   );
