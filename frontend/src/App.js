@@ -4,12 +4,20 @@ import FinancialForm from "./components/FinancialForm";
 function App() {
 
   const [result, setResult] = useState(null);
-  const [question,setQuestion] = useState("");
-  const [answer,setAnswer] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const askAI = async () => {
-    try {
-      const response = await fetch("http://localhost:8080/api/chat",{
+
+    if(!question.trim()){
+      alert("Please enter a question");
+      return;
+    }
+
+    try{
+
+      const response = await fetch("http://localhost:8080/api/ai-advice",{
         method:"POST",
         headers:{
           "Content-Type":"application/json"
@@ -18,15 +26,20 @@ function App() {
           question:question
         })
       });
+
       const data = await response.json();
+
       setAnswer(data.answer);
-    } catch(error){
-      console.error("Chat error:",error);
+
+    }catch(error){
+      console.error("AI error:",error);
     }
   };
 
   const handleSubmit = async (formData) => {
+
     try {
+
       const response = await fetch("http://localhost:8080/api/analyze", {
         method: "POST",
         headers: {
@@ -34,8 +47,11 @@ function App() {
         },
         body: JSON.stringify(formData),
       });
+
       const data = await response.json();
+
       setResult(data);
+
     } catch (error) {
       console.error("Error connecting backend:", error);
     }
@@ -50,6 +66,7 @@ function App() {
       <FinancialForm onSubmit={handleSubmit} />
 
       {result && (
+
         <div style={{
           marginTop: "40px",
           display: "flex",
@@ -94,11 +111,14 @@ function App() {
           </div>
 
         </div>
+
       )}
 
-      <div style={{marginTop:"50px"}}>
+      {/* AI Advisor */}
 
-        <h2>AI Financial Advisor</h2>
+      <div style={{marginTop:"60px"}}>
+
+        <h2>🤖 AI Financial Advisor</h2>
 
         <input
           type="text"
@@ -115,16 +135,26 @@ function App() {
           Ask AI
         </button>
 
+        {loading && <p>Thinking...</p>}
+
         {answer && (
+
           <div style={{
             marginTop:"20px",
             border:"1px solid #ddd",
             padding:"15px",
-            borderRadius:"8px"
+            borderRadius:"8px",
+            maxWidth:"600px",
+            marginLeft:"auto",
+            marginRight:"auto"
           }}>
+
             <strong>AI Advice:</strong>
+
             <p>{answer}</p>
+
           </div>
+
         )}
 
       </div>
