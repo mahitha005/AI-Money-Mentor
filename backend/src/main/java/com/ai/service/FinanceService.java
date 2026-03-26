@@ -3,103 +3,83 @@ package com.ai.backend.service;
 import com.ai.backend.model.FinanceRequest;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class FinanceService {
 
-    public Map<String,Object> calculateFinancialRatios(FinanceRequest request){
+    public Map<String, Object> calculateFinancialRatios(FinanceRequest request) {
 
-        double income = request.getIncome();
-        double expenses = request.getExpenses();
-        double savings = request.getSavings();
+        double income      = request.getIncome();
+        double expenses    = request.getExpenses();
+        double savings     = request.getSavings();
         double investments = request.getInvestments();
-        double debt = request.getDebt();
+        double debt        = request.getDebt();
 
-        // Financial ratios
-        double savingsRate = savings / income;
-        double debtRatio = debt / income;
-        double expenseRatio = expenses / income;
-        double investmentRatio = investments / income;
+        double savingsRate    = income > 0 ? savings / income : 0;
+        double debtRatio      = income > 0 ? debt / income : 0;
+        double expenseRatio   = income > 0 ? expenses / income : 0;
+        double investmentRatio= income > 0 ? investments / income : 0;
 
-        // ML Prediction
-        String health = predictHealthML(
-                savingsRate,
-                expenseRatio,
-                debtRatio,
-                investmentRatio
-        );
+        String health = predictHealthML(savingsRate, expenseRatio, debtRatio, investmentRatio);
 
-        // Emergency fund
         double emergencyFundRequired = expenses * 6;
-        double emergencyFundGap = emergencyFundRequired - savings;
 
-        // Portfolio recommendation
+        // Portfolio based on health
         String portfolio;
-
-        if("High".equalsIgnoreCase(health)){
+        if ("High".equalsIgnoreCase(health)) {
             portfolio = "70% Equity Index Funds, 20% Debt Funds, 10% Gold";
-        }
-        else if("Medium".equalsIgnoreCase(health)){
+        } else if ("Medium".equalsIgnoreCase(health)) {
             portfolio = "60% Equity Index Funds, 30% Debt Funds, 10% Gold";
-        }
-        else{
+        } else {
             portfolio = "40% Equity Index Funds, 40% Debt Funds, 20% Gold";
         }
 
-        Map<String,Object> result = new HashMap<>();
-
-        // Convert ratios to percentage
-        result.put("savingsRate", String.format("%.2f%%", savingsRate * 100));
-        result.put("debtRatio", String.format("%.2f%%", debtRatio * 100));
-        result.put("expenseRatio", String.format("%.2f%%", expenseRatio * 100));
-        result.put("investmentRatio", String.format("%.2f%%", investmentRatio * 100));
-
-        result.put("health", health);
-        result.put("emergencyFundRequired", emergencyFundRequired);
-        result.put("emergencyFundGap", emergencyFundGap);
+        Map<String, Object> result = new HashMap<>();
+        result.put("savingsRate",          String.format("%.2f%%", savingsRate * 100));
+        result.put("debtRatio",            String.format("%.2f%%", debtRatio * 100));
+        result.put("expenseRatio",         String.format("%.2f%%", expenseRatio * 100));
+        result.put("investmentRatio",      String.format("%.2f%%", investmentRatio * 100));
+        result.put("health",               health);
+        result.put("emergencyFundRequired",emergencyFundRequired);
         result.put("recommendedPortfolio", portfolio);
-
+        // Raw values for AI context
+        result.put("income",      income);
+        result.put("expenses",    expenses);
+        result.put("savings",     savings);
+        result.put("investments", investments);
+        result.put("debt",        debt);
         return result;
     }
 
-
-    public String predictHealthML(double savingsRate,
-                                  double expenseRatio,
-                                  double debtRatio,
-                                  double investmentRatio){
-
-        try{
-
+    public String predictHealthML(double savingsRate, double expenseRatio,
+                                   double debtRatio, double investmentRatio) {
+        Process process = null;
+        try {
             ProcessBuilder pb = new ProcessBuilder(
-                    "python",
-                    "ml-model/predict.py",
-                    String.valueOf(savingsRate),
-                    String.valueOf(expenseRatio),
-                    String.valueOf(debtRatio),
-                    String.valueOf(investmentRatio)
+                "python", "ml-model/predict.py",
+                String.valueOf(savingsRate),
+                String.valueOf(expenseRatio),
+                String.valueOf(debtRatio),
+                String.valueOf(investmentRatio)
             );
+            process = pb.start();
 
-            Process process = pb.start();
-
-            BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            String prediction = reader.readLine();
-
-            if(prediction == null || prediction.isEmpty()){
-                return "Medium";
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String prediction = reader.readLine();
+                return (prediction == null || prediction.isBlank()) ? "Medium" : prediction.trim();
             }
-
-            return prediction;
-
-        }
-        catch(Exception e){
+        } catch (IOException e) {
             e.printStackTrace();
             return "Medium";
+        } finally {
+            if (process != null) process.destroy();
         }
     }
 }
