@@ -7,7 +7,7 @@ const SESSION_ID = "session_" + Date.now();
 function renderMarkdown(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^[•\-]\s(.+)/gm, "<li>$1</li>")
+    .replace(/[•\-]\s(.+)/gm, "<li>$1</li>")
     .replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>")
     .replace(/\n/g, "<br/>");
 }
