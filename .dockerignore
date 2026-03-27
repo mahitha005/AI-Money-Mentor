@@ -1,0 +1,7 @@
+frontend/
+backend/target/
+ml-model/dataset/
+ml-model/train_model.py
+dataset/
+.git/
+*.md

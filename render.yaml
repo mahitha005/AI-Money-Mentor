@@ -1,10 +1,9 @@
 services:
   - type: web
     name: ai-money-mentor-backend
-    runtime: java
-    buildCommand: cd backend && ./mvnw clean package -DskipTests
-    startCommand: java -jar backend/target/backend-0.0.1-SNAPSHOT.jar
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: GEMINI_API_KEY
+      - key: API_KEY
         sync: false
     autoDeploy: true
