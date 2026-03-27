@@ -15,45 +15,40 @@ public class FinanceService {
 
     public Map<String, Object> calculateFinancialRatios(FinanceRequest request) {
 
-        double income      = request.getIncome();
-        double expenses    = request.getExpenses();
-        double savings     = request.getSavings();
-        double investments = request.getInvestments();
-        double debt        = request.getDebt();
+        double income         = request.getIncome();
+        double expenses       = request.getExpenses();
+        double monthlySavings = request.getMonthlySavings();
+        double totalSavings   = request.getTotalSavings();
+        double investments    = request.getInvestments();
+        double debt           = request.getDebt();
 
-        double savingsRate    = income > 0 ? savings / income : 0;
-        double debtRatio      = income > 0 ? debt / income : 0;
-        double expenseRatio   = income > 0 ? expenses / income : 0;
-        double investmentRatio= income > 0 ? investments / income : 0;
+        double savingsRate     = income > 0 ? monthlySavings / income : 0;
+        double debtRatio       = income > 0 ? debt / income : 0;
+        double expenseRatio    = income > 0 ? expenses / income : 0;
+        double investmentRatio = income > 0 ? investments / income : 0;
 
         String health = predictHealthML(savingsRate, expenseRatio, debtRatio, investmentRatio);
 
         double emergencyFundRequired = expenses * 6;
-
-        // Portfolio based on health
-        String portfolio;
-        if ("High".equalsIgnoreCase(health)) {
-            portfolio = "70% Equity Index Funds, 20% Debt Funds, 10% Gold";
-        } else if ("Medium".equalsIgnoreCase(health)) {
-            portfolio = "60% Equity Index Funds, 30% Debt Funds, 10% Gold";
-        } else {
-            portfolio = "40% Equity Index Funds, 40% Debt Funds, 20% Gold";
-        }
+        double emergencyFundGap      = Math.max(0, emergencyFundRequired - totalSavings);
+        double monthsCovered         = expenses > 0 ? totalSavings / expenses : 0;
+        double retirementCorpus      = expenses * 12 * 25;
 
         Map<String, Object> result = new HashMap<>();
-        result.put("savingsRate",          String.format("%.2f%%", savingsRate * 100));
-        result.put("debtRatio",            String.format("%.2f%%", debtRatio * 100));
-        result.put("expenseRatio",         String.format("%.2f%%", expenseRatio * 100));
-        result.put("investmentRatio",      String.format("%.2f%%", investmentRatio * 100));
-        result.put("health",               health);
-        result.put("emergencyFundRequired",emergencyFundRequired);
-        result.put("recommendedPortfolio", portfolio);
-        // Raw values for AI context
-        result.put("income",      income);
-        result.put("expenses",    expenses);
-        result.put("savings",     savings);
-        result.put("investments", investments);
-        result.put("debt",        debt);
+        result.put("savingsRate",           String.format("%.2f%%", savingsRate * 100));
+        result.put("debtRatio",             String.format("%.2f%%", debtRatio * 100));
+        result.put("expenseRatio",          String.format("%.2f%%", expenseRatio * 100));
+        result.put("health",                health);
+        result.put("emergencyFundRequired", emergencyFundRequired);
+        result.put("emergencyFundGap",      emergencyFundGap);
+        result.put("monthsCovered",         String.format("%.1f", monthsCovered));
+        result.put("retirementCorpus",       retirementCorpus);
+        result.put("income",                income);
+        result.put("expenses",              expenses);
+        result.put("monthlySavings",        monthlySavings);
+        result.put("totalSavings",          totalSavings);
+        result.put("investments",           investments);
+        result.put("debt",                  debt);
         return result;
     }
 

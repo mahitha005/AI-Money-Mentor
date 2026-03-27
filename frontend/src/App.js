@@ -1,83 +1,100 @@
 import React, { useState, useRef, useEffect } from "react";
-import FinancialForm from "./components/FinancialForm";
+import "./App.css";
 
 const SESSION_ID = "session_" + Date.now();
 
-// Simple markdown renderer: bold, bullets, links
 function renderMarkdown(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/^[•\-]\s(.+)/gm, "<li>$1</li>")
-    .replace(/(<li>[\s\S]*?<\/li>)/g, "<ul style='text-align:left;padding-left:18px;margin:6px 0'>$1</ul>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer" style="color:#0070f3">$1</a>')
-    .replace(/\n{2,}/g, "<br/>");
+    .replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>")
+    .replace(/\n/g, "<br/>");
+}
+
+function healthClass(h) {
+  if (!h) return "";
+  if (h === "High")   return "good";
+  if (h === "Medium") return "warn";
+  return "danger";
 }
 
 export default function App() {
-  const [result, setResult]                     = useState(null);
-  const [question, setQuestion]                 = useState("");
-  const [chatHistory, setChatHistory]           = useState([]);
-  const [loading, setLoading]                   = useState(false);
-  const [monthlySavings, setMonthlySavings]     = useState("");
-  const [presentSaved, setPresentSaved]         = useState("");
+
+  const [formData, setFormData] = useState({
+    age: "", income: "", expenses: "",
+    monthlySavings: "", totalSavings: "", debt: "", investments: ""
+  });
+  const [language, setLanguage] = useState("English");
+  const [result, setResult]     = useState(null);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading]   = useState(false);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory, loading]);
 
-  const handleSubmit = async (formData) => {
-    try {
-      const res  = await fetch("http://localhost:8080/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      const ctx  = { ...data, ...formData };
-      setResult(ctx);
-      // Proactive AI suggestion fires automatically after analysis
-      await callAI("Give me a quick overview of my financial health and your top 2 suggestions.", ctx);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const callAI = async (q, ctx) => {
-    const activeCtx = ctx || result;
-    if (!activeCtx) return;
-    setLoading(true);
-    const gap = (activeCtx.emergencyFundRequired || 0) - parseFloat(presentSaved || 0);
+  // ── ANALYZE ──
+  const handleSubmit = async () => {
     try {
-      const res  = await fetch("http://localhost:8080/api/ai-advice", {
+      const res = await fetch("http://localhost:8080/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId:            SESSION_ID,
-          question:             q,
-          income:               activeCtx.income        || 0,
-          expenses:             activeCtx.expenses      || 0,
-          savings:              activeCtx.savings       || 0,
-          investments:          activeCtx.investments   || 0,
-          debt:                 activeCtx.debt          || 0,
-          monthlySavings:       parseFloat(monthlySavings || 0),
-          presentSavedAmount:   parseFloat(presentSaved   || 0),
-          emergencyFundRequired:activeCtx.emergencyFundRequired || 0,
-          emergencyFundGap:     gap,
-          health:               activeCtx.health        || "Unknown",
-        }),
+          ...formData,
+          income:         parseFloat(formData.income || 0),
+          expenses:       parseFloat(formData.expenses || 0),
+          monthlySavings: parseFloat(formData.monthlySavings || 0),
+          totalSavings:   parseFloat(formData.totalSavings || 0),
+          debt:           parseFloat(formData.debt || 0),
+          investments:    parseFloat(formData.investments || 0)
+        })
+      });
+      const data = await res.json();
+      const ctx = { ...data, age: parseInt(formData.age || 0), language };
+      setResult(ctx);
+      setChatHistory([]);
+      await callAI("Give my financial summary and top 2 improvements", ctx);
+    } catch (e) { console.error(e); }
+  };
+
+  // ── AI ──
+  const callAI = async (q, ctx) => {
+    const active = ctx || result;
+    if (!active) return;
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/ai-advice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: SESSION_ID, question: q,
+          age:              active.age || 0,
+          income:           active.income || 0,
+          expenses:         active.expenses || 0,
+          monthlySavings:   active.monthlySavings || 0,
+          totalSavings:     active.totalSavings || 0,
+          savingsRate:      active.savingsRate || "0%",
+          debtRatio:        active.debtRatio || "0%",
+          emergencyFundGap: active.emergencyFundGap || 0,
+          monthsCovered:    active.monthsCovered || "0",
+          retirementCorpus: active.retirementCorpus || 0,
+          health:           active.health || "Unknown",
+          language:         active.language || language
+        })
       });
       const data = await res.json();
       setChatHistory(prev => [
         ...prev,
         { role: "user", text: q },
-        { role: "ai",   text: data.answer },
+        { role: "ai",   text: data.answer }
       ]);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    setLoading(false);
   };
 
   const askAI = async () => {
@@ -87,114 +104,149 @@ export default function App() {
     await callAI(q);
   };
 
-  const emergencyGap = result
-    ? (result.emergencyFundRequired || 0) - parseFloat(presentSaved || 0)
-    : null;
+  const handleKey = (e) => { if (e.key === "Enter") askAI(); };
 
-  const cards = result ? [
-    { label: "Financial Health",         value: result.health },
-    { label: "Savings Rate",             value: result.savingsRate },
-    { label: "Debt Ratio",               value: result.debtRatio },
-    { label: "Expense Ratio",            value: result.expenseRatio },
-    { label: "Emergency Fund Required",  value: `₹${result.emergencyFundRequired}` },
-    { label: "Emergency Fund Gap",       value: `₹${emergencyGap?.toFixed(2)}`, highlight: emergencyGap > 0 },
-    { label: "Recommended Portfolio",    value: result.recommendedPortfolio },
-  ] : [];
-
+  // ── UI ──
   return (
-    <div style={{ maxWidth: 820, margin: "40px auto", fontFamily: "Arial", padding: "0 20px" }}>
-      <h1 style={{ textAlign: "center" }}>💰 AI Money Mentor</h1>
-
-      {/* Monthly Savings + Present Saved Amount */}
-      <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 20 }}>
-        <input
-          type="number" placeholder="Monthly Savings (₹)"
-          value={monthlySavings} onChange={e => setMonthlySavings(e.target.value)}
-          style={inputStyle}
-        />
-        <input
-          type="number" placeholder="Present Total Saved Amount (₹)"
-          value={presentSaved} onChange={e => setPresentSaved(e.target.value)}
-          style={inputStyle}
-        />
+    <>
+      <div className="header">
+        <h1>💰 AI Money Mentor</h1>
+        <p>Smart financial advice powered by AI — personalized for you</p>
       </div>
 
-      <FinancialForm onSubmit={handleSubmit} />
+      <div className="main">
 
-      {/* Result Cards */}
-      {result && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 32, justifyContent: "center" }}>
-          {cards.map(({ label, value, highlight }) => (
-            <div key={label} style={{ ...cardStyle, borderColor: highlight ? "#e53e3e" : "#ddd" }}>
-              <div style={{ fontSize: 12, color: "#666" }}>{label}</div>
-              <div style={{ fontSize: 16, fontWeight: "bold", marginTop: 6, color: highlight ? "#e53e3e" : "#222" }}>
-                {value}
+        {/* BASIC INFO */}
+        <div className="card">
+          <div className="card-title">👤 Basic Info</div>
+          <div className="grid-2">
+            <Field label="Age"><input name="age" placeholder="e.g. 25" onChange={handleChange} /></Field>
+            <Field label="Monthly Income (₹)"><input name="income" placeholder="e.g. 200000" onChange={handleChange} /></Field>
+          </div>
+        </div>
+
+        {/* MONTHLY CASH FLOW */}
+        <div className="card">
+          <div className="card-title">💸 Monthly Cash Flow</div>
+          <div className="grid-3">
+            <Field label="Expenses (₹)"><input name="expenses" placeholder="e.g. 30000" onChange={handleChange} /></Field>
+            <Field label="Savings (₹)"><input name="monthlySavings" placeholder="e.g. 50000" onChange={handleChange} /></Field>
+            <Field label="Debt EMI (₹)"><input name="debt" placeholder="e.g. 10000" onChange={handleChange} /></Field>
+          </div>
+        </div>
+
+        {/* FINANCIAL POSITION */}
+        <div className="card">
+          <div className="card-title">🏦 Current Financial Position</div>
+          <div className="grid-2">
+            <Field label="Total Savings (₹)"><input name="totalSavings" placeholder="e.g. 100000" onChange={handleChange} /></Field>
+            <Field label="Investments (₹)"><input name="investments" placeholder="e.g. 50000" onChange={handleChange} /></Field>
+          </div>
+        </div>
+
+        {/* LANGUAGE */}
+        <div className="card">
+          <div className="card-title">🌐 Preferred Language</div>
+          <div style={{ maxWidth: 260 }}>
+            <Field label="AI Response Language">
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                <option>English</option>
+                <option>Telugu</option>
+                <option>Hindi</option>
+                <option>Hinglish</option>
+              </select>
+            </Field>
+          </div>
+        </div>
+
+        <button className="btn-analyze" onClick={handleSubmit}>
+          ⚡ Analyze Financial Health
+        </button>
+
+        {/* RESULTS */}
+        {result && (
+          <>
+            <div className="results-grid">
+              <ResultCard
+                icon="🏥" label="Health" value={result.health}
+                variant={healthClass(result.health)}
+              />
+              <ResultCard icon="💰" label="Savings Rate" value={result.savingsRate} />
+              <ResultCard icon="💳" label="Debt Ratio"   value={result.debtRatio}
+                variant={parseFloat(result.debtRatio) > 40 ? "danger" : parseFloat(result.debtRatio) > 20 ? "warn" : ""}
+              />
+              <ResultCard icon="🛡️" label="Emergency Required" value={`₹${result.emergencyFundRequired?.toLocaleString()}`} />
+              <ResultCard
+                icon="⚠️" label="Emergency Gap"
+                value={`₹${result.emergencyFundGap?.toLocaleString()}`}
+                variant={result.emergencyFundGap > 0 ? "danger" : "good"}
+              />
+              <ResultCard icon="📅" label="Months Covered" value={`${result.monthsCovered} mo`}
+                variant={parseFloat(result.monthsCovered) >= 6 ? "good" : parseFloat(result.monthsCovered) >= 3 ? "warn" : "danger"}
+              />
+            </div>
+
+            {/* CHAT */}
+            <div className="chat-wrapper">
+              <div className="chat-header">
+                🤖 AI Financial Advisor
+                <span style={{ marginLeft: "auto", color: "#4a5568", fontWeight: 400 }}>
+                  {language}
+                </span>
+              </div>
+              <div className="chat-messages">
+                {chatHistory.map((msg, i) => (
+                  <div key={i} className={`msg-row ${msg.role}`}>
+                    <div
+                      className={`msg-bubble ${msg.role}`}
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
+                    />
+                  </div>
+                ))}
+                {loading && (
+                  <div className="msg-row ai">
+                    <div className="typing">
+                      <span /><span /><span />
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
               </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* AI Chat */}
-      <div style={{ marginTop: 48 }}>
-        <h2 style={{ textAlign: "center" }}>🤖 AI Financial Advisor</h2>
-
-        <div style={{
-          border: "1px solid #ddd", borderRadius: 12, padding: 16,
-          minHeight: 200, maxHeight: 440, overflowY: "auto", background: "#f9f9f9"
-        }}>
-          {chatHistory.length === 0 && (
-            <p style={{ color: "#aaa", textAlign: "center" }}>
-              Submit your financial data above to get started...
-            </p>
-          )}
-          {chatHistory.map((msg, i) => (
-            <div key={i} style={{ marginBottom: 14, textAlign: msg.role === "user" ? "right" : "left" }}>
-              <span style={{
-                display: "inline-block",
-                background: msg.role === "user" ? "#0070f3" : "#fff",
-                color: msg.role === "user" ? "#fff" : "#222",
-                border: msg.role === "ai" ? "1px solid #e2e8f0" : "none",
-                borderRadius: 10, padding: "10px 14px", maxWidth: "80%", textAlign: "left",
-              }}>
-                {msg.role === "ai"
-                  ? <span dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
-                  : msg.text}
-              </span>
+            <div className="chat-input-row">
+              <input
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder="Ask anything about your finances..."
+              />
+              <button className="btn-ask" onClick={askAI}>Send ➤</button>
             </div>
-          ))}
-          {loading && <p style={{ color: "#888", textAlign: "center" }}>⏳ Thinking...</p>}
-          <div ref={chatEndRef} />
-        </div>
+          </>
+        )}
 
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <input
-            type="text" placeholder="Ask a follow-up question..."
-            value={question} onChange={e => setQuestion(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && askAI()}
-            style={{ ...inputStyle, flex: 1 }}
-            disabled={!result}
-          />
-          <button onClick={askAI} disabled={loading || !result} style={btnStyle}>
-            Ask
-          </button>
-        </div>
       </div>
+    </>
+  );
+}
+
+// ── COMPONENTS ──
+function Field({ label, children }) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      {children}
     </div>
   );
 }
 
-const cardStyle = {
-  border: "1px solid #ddd", borderRadius: 10, padding: "14px 18px",
-  minWidth: 160, boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
-  background: "#fff", textAlign: "center",
-};
-const inputStyle = {
-  padding: "10px 12px", borderRadius: 8,
-  border: "1px solid #ccc", fontSize: 14,
-};
-const btnStyle = {
-  padding: "10px 22px", borderRadius: 8,
-  background: "#0070f3", color: "#fff",
-  border: "none", cursor: "pointer", fontSize: 14,
-};
+function ResultCard({ icon, label, value, variant = "" }) {
+  return (
+    <div className={`result-card ${variant}`}>
+      <div className="rc-icon">{icon}</div>
+      <div className="rc-label">{label}</div>
+      <div className="rc-value">{value}</div>
+    </div>
+  );
+}

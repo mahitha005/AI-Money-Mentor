@@ -5,7 +5,8 @@ public class FinanceRequest {
     private int age;
     private double income;
     private double expenses;
-    private double savings;
+    private double monthlySavings;
+    private double totalSavings;
     private double investments;
     private double debt;
 
@@ -18,8 +19,11 @@ public class FinanceRequest {
     public double getExpenses() { return expenses; }
     public void setExpenses(double expenses) { this.expenses = expenses; }
 
-    public double getSavings() { return savings; }
-    public void setSavings(double savings) { this.savings = savings; }
+    public double getMonthlySavings() { return monthlySavings; }
+    public void setMonthlySavings(double monthlySavings) { this.monthlySavings = monthlySavings; }
+
+    public double getTotalSavings() { return totalSavings; }
+    public void setTotalSavings(double totalSavings) { this.totalSavings = totalSavings; }
 
     public double getInvestments() { return investments; }
     public void setInvestments(double investments) { this.investments = investments; }
