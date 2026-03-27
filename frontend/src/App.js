@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./App.css";
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080";
 const SESSION_ID = "session_" + Date.now();
 
 function renderMarkdown(text) {
@@ -41,7 +42,7 @@ export default function App() {
   // ── ANALYZE ──
   const handleSubmit = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/analyze", {
+      const res = await fetch(`${API_BASE}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,7 +69,7 @@ export default function App() {
     if (!active) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/ai-advice", {
+      const res = await fetch(`${API_BASE}/api/ai-advice`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
