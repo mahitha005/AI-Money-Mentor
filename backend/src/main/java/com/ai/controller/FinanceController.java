@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = { "http://localhost:3000", "https://ai-money-mentor-vt91.onrender.com" })
+@CrossOrigin(origins = { "http://localhost:3000", "https://ai-money-mentor-vt91.onrender.com", "https://ai-money-mentor-plum.vercel.app" })
 public class FinanceController {
 
     private final FinanceService financeService;
